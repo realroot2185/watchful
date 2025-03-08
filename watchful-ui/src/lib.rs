@@ -40,6 +40,7 @@ fn text_text_style(color: Rgb) -> U8g2TextStyle<Rgb> {
 
 fn perc_text_style(color: Rgb) -> U8g2TextStyle<Rgb> {
     U8g2TextStyle::new(fonts::u8g2_font_spleen12x24_mf, color)
+    //U8g2TextStyle::new(fonts::u8g2_font_spleen8x16_mf, color)
 }
 
 fn count_text_style(color: Rgb) -> U8g2TextStyle<Rgb> {
@@ -117,12 +118,17 @@ impl TimeView {
             .arrange()
             .align_to(&display_area, horizontal::Center, vertical::Center)
             .draw(display)?;
-        
+        /*
 		let display_area = display_area.offset(-5);
         let top_right_y = display_area.top_left.y + 20;
         let top_right_x = display_area.top_left.x + display_area.size.width as i32 - 22;
-        let pos = Point::new(top_right_x, top_right_y);
+        let pos = Point::new(top_right_x, top_right_y);*/
         let color;
+        
+        let display_area = display_area.offset(-5);
+        let top_right_y = display_area.top_left.y;
+        let top_right_x = display_area.top_left.x + display_area.size.width as i32 - 30;
+        let pos = Point::new(top_right_x, top_right_y);
         
         if self.battery_charging {
         	color = Rgb::CSS_DEEP_SKY_BLUE;
@@ -164,6 +170,7 @@ impl TimeView {
             .with_alignment(vertical::Center)
             .arrange()
             .align_to(&display_area, horizontal::Right, vertical::Top)
+            .translate(Point::new(-40, 5))
             .draw(display)?;
            
         Ok(())
