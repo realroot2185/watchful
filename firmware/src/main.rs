@@ -230,7 +230,13 @@ async fn main(s: Spawner) {
         firmware_validator,
         vibrator,
     };
+/*
+	s.must_spawn(alarm_task());
 
+	if device.clock.get_alarm_on() {
+		
+	}*/
+	
     let mut state = WatchState::default();
     state.draw(&mut device).await;
     loop {
@@ -250,6 +256,21 @@ async fn watchdog_task() {
     loop {
         handle.pet();
         Timer::after(Duration::from_secs(4)).await;
+    }
+}
+
+// Checks for the alarm
+#[embassy_executor::task]
+async fn alarm_task() {
+    loop {
+    	/*
+    	if clock.get_alarm_on() {
+    		if clock.get().time().hour() == clock.get_alarm().0
+    			&& clock.get().time().minute() == clock.get_alarm().1 {
+				clock.set_alarm_on(false);
+				vibrator.on_for(4500).await;
+    		}
+    	}*/
     }
 }
 

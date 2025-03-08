@@ -212,7 +212,7 @@ impl MenuState {
                 }
                 MenuAction::Timer => {
                     defmt::info!("Not implemented");
-                    WatchState::Timer(TimerState {})
+                    WatchState::Timer(TimerState { count: 1 })
                 }
                 MenuAction::FindPhone => {
                     defmt::info!("Not implemented");
@@ -334,7 +334,9 @@ impl WorkoutState {
 }
 
 #[derive(PartialEq)]
-pub struct TimerState {}
+pub struct TimerState {
+	pub count: u16,
+}
 
 impl TimerState {
     pub async fn draw(&mut self, _device: &mut Device<'_>) {}
@@ -348,7 +350,7 @@ impl TimerState {
 		let mut seconds = 5;
         let timer = async {
   			loop {
-                TimerView::new(time::Duration::new(seconds, 0), true)
+                TimerView::new(time::Duration::new(seconds, 1), true, self.count)
                     .draw(screen.display())
                     .unwrap();
                 screen.on();
@@ -359,8 +361,9 @@ impl TimerState {
                     break;
                 }
             }
-
-            TimerView::new(time::Duration::ZERO, false)
+            
+			self.count += 1;
+            TimerView::new(time::Duration::ZERO, false, self.count)
                     .draw(screen.display())
                     .unwrap();
                 screen.on();
@@ -372,7 +375,7 @@ impl TimerState {
             	vibrator.off();
             	WatchState::Menu(MenuState::new(MenuView::main()))
             },
-            Either::Second(_) => WatchState::Timer(TimerState {}),
+            Either::Second(_) => WatchState::Timer(TimerState { count: self.count }),
         };
         next
     }

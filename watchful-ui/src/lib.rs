@@ -38,6 +38,14 @@ fn text_text_style(color: Rgb) -> U8g2TextStyle<Rgb> {
     U8g2TextStyle::new(fonts::u8g2_font_unifont_t_symbols, color)
 }
 
+fn perc_text_style(color: Rgb) -> U8g2TextStyle<Rgb> {
+    U8g2TextStyle::new(fonts::u8g2_font_spleen12x24_mf, color)
+}
+
+fn count_text_style(color: Rgb) -> U8g2TextStyle<Rgb> {
+    U8g2TextStyle::new(fonts::u8g2_font_logisoso46_tn, color)
+}
+
 pub enum ButtonEvent {
     ShortPress,
     LongPress,
@@ -109,27 +117,55 @@ impl TimeView {
             .arrange()
             .align_to(&display_area, horizontal::Center, vertical::Center)
             .draw(display)?;
-
-        let display_area = display_area.offset(-5);
-        let top_right_y = display_area.top_left.y;
-        let top_right_x = display_area.top_left.x + display_area.size.width as i32 - 30;
+        
+		let display_area = display_area.offset(-5);
+        let top_right_y = display_area.top_left.y + 20;
+        let top_right_x = display_area.top_left.x + display_area.size.width as i32 - 22;
         let pos = Point::new(top_right_x, top_right_y);
+        let color;
+        
         if self.battery_charging {
-            Image::new(&icons::size24px::system::BatteryCharging::new(Rgb::CSS_DARK_CYAN), pos).draw(display)?
+        	color = Rgb::CSS_DEEP_SKY_BLUE;
+            Image::new(&icons::size24px::system::BatteryCharging::new(color), pos).draw(display)?
         } else {
             if self.battery_level > 85 {
-                Image::new(&icons::size24px::system::BatteryFull::new(Rgb::CSS_DARK_CYAN), pos).draw(display)?
+            	color = Rgb::CSS_DARK_GREEN;
+                Image::new(&icons::size24px::system::BatteryFull::new(color), pos).draw(display)?
             } else if self.battery_level > 65 {
-                Image::new(&icons::size24px::system::BatterySevenFive::new(Rgb::CSS_DARK_CYAN), pos).draw(display)?
+            	color = Rgb::CSS_GREEN;
+                Image::new(&icons::size24px::system::BatterySevenFive::new(color), pos).draw(display)?
             } else if self.battery_level > 35 {
-                Image::new(&icons::size24px::system::BatteryFiveZero::new(Rgb::CSS_DARK_CYAN), pos).draw(display)?
+            	color = Rgb::CSS_YELLOW;
+                Image::new(&icons::size24px::system::BatteryFiveZero::new(color), pos).draw(display)?
             } else if self.battery_level > 10 {
-                Image::new(&icons::size24px::system::BatteryTwoFive::new(Rgb::CSS_DARK_CYAN), pos).draw(display)?
+            	color = Rgb::CSS_DARK_ORANGE;
+                Image::new(&icons::size24px::system::BatteryTwoFive::new(color), pos).draw(display)?
             } else {
-                Image::new(&icons::size24px::system::BatteryEmpty::new(Rgb::CSS_DARK_CYAN), pos).draw(display)?
+            	color = Rgb::CSS_RED;
+                Image::new(&icons::size24px::system::BatteryEmpty::new(color), pos).draw(display)?
             }
         };
-
+        
+		let mut buf: heapless::String<16> = heapless::String::new();
+		write!(buf, "{}%", self.battery_level).unwrap();
+        let perc = Text::with_text_style(
+            &buf,
+            display.bounding_box().center(),
+            perc_text_style(color),
+            TextStyleBuilder::new()
+                .alignment(embedded_graphics::text::Alignment::Right)
+                .baseline(embedded_graphics::text::Baseline::Alphabetic)
+                .build(),
+        );
+        
+        let display_area = display.bounding_box();
+        LinearLayout::horizontal(Chain::new(perc))
+            .with_spacing(spacing::FixedMargin(10))
+            .with_alignment(vertical::Center)
+            .arrange()
+            .align_to(&display_area, horizontal::Right, vertical::Top)
+            .draw(display)?;
+           
         Ok(())
     }
 }
@@ -192,11 +228,12 @@ impl WorkoutView {
 pub struct TimerView {
     pub remaining: time::Duration,
     pub running: bool,
+    pub count: u16,
 }
 
 impl TimerView {
-    pub fn new(remaining: time::Duration, running: bool) -> Self {
-        Self { remaining, running }
+    pub fn new(remaining: time::Duration, running: bool, count: u16) -> Self {
+        Self { remaining, running, count }
     }
     pub fn draw<D: DrawTarget<Color = Rgb>>(&self, display: &mut D) -> Result<(), D::Error> {
         display.clear(Rgb::BLACK)?;
@@ -231,6 +268,26 @@ impl TimerView {
             .align_to(&display_area, horizontal::Center, vertical::Center)
             .draw(display)?;
 
+		let mut buf: heapless::String<16> = heapless::String::new();
+		write!(buf, "{}", self.count).unwrap();
+        let count = Text::with_text_style(
+            &buf,
+            display.bounding_box().center(),
+            count_text_style(Rgb::CSS_LIME),
+            TextStyleBuilder::new()
+                .alignment(embedded_graphics::text::Alignment::Right)
+                .baseline(embedded_graphics::text::Baseline::Alphabetic)
+                .build(),
+        );
+        
+        let display_area = display.bounding_box();
+        LinearLayout::horizontal(Chain::new(count))
+            .with_alignment(vertical::Center)
+            .arrange()
+            .align_to(&display_area, horizontal::Center, vertical::Top)
+            .translate(Point::new(0, 16))
+            .draw(display)?;
+           
 		Ok(())
 	}
 }
@@ -376,7 +433,14 @@ impl MenuView {
                 } else {
                     None
                 }
-            }
+            }/*
+            Self::Timer { toggle } => {
+                if toggle.is_clicked(input) {
+                    Some(MenuAction::ToggleTimer)
+                } else {
+                    None
+                }
+            }*/
             Self::Settings { firmware, brightness, time_settings, reset } => {
                 if firmware.is_clicked(input) {
                     Some(MenuAction::FirmwareSettings)
@@ -651,7 +715,7 @@ impl TimeDetails {
         )
         .unwrap();
 
-		let cd = Text::with_text_style(
+		let hm = Text::with_text_style(
             &buf,
             display.bounding_box().center(),
             watch_text_style(Rgb::CSS_DARK_CYAN),
@@ -662,7 +726,7 @@ impl TimeDetails {
         );
 
         let display_area = display.bounding_box();
-        LinearLayout::vertical(Chain::new(cd))
+        LinearLayout::vertical(Chain::new(hm))
             .with_spacing(spacing::FixedMargin(10))
             .with_alignment(horizontal::Center)
             .arrange()
